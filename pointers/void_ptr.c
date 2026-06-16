@@ -8,10 +8,10 @@ int main()
     void *ptr;
 
     ptr = &a;
-    printf("Integer value: %d\n", *(int *)ptr);   // cast to int*
+    printf("Integer value: %d\n", *(int *)ptr);   
 
     ptr = &b;
-    printf("Float value: %.2f\n", *(float *)ptr); // cast to float*
+    printf("Float value: %.2f\n", *(float *)ptr);
 
     return 0;
 }

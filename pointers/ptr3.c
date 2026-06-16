@@ -1,8 +1,7 @@
 #include "stdio.h"
 int temp_data(int *ptr);
 
-
-int temp_data(int *ptr)
+int temp_data( int *ptr )
 {
     int var = 10;
 
