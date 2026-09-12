@@ -7,12 +7,12 @@ int main()
 {
     char string_arr[15] = "Hello_embedded";
 
-    // printf("size of the string:%d\n", sizeof(string_arr));
+    printf("size of the string:%d\n", sizeof(string_arr));
 
-    // for(int i = 0; i<=sizeof(string_arr); i++)
-    // {
-    //     printf("character:%c\n", string_arr[i]);
-    // }
+    for(int i = 0; i<=sizeof(string_arr); i++)
+    {
+        printf("character:%c\n", string_arr[i]);
+    }
 
     // Here string length is calculated using non library function.
     int no_of_ch = my_strlen(string_arr);
@@ -28,6 +28,7 @@ int my_strlen(char *string)
     while(*string != '\0')
     {
         count++;
+        string++;
     }
 
     return count;
