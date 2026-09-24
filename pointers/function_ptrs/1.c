@@ -9,8 +9,7 @@ void print_string(void)
 }
 
 int main()
- {
-
+{
     void (*fp)(void);
     fp = &print_string;
     
