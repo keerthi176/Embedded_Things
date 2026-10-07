@@ -23,18 +23,23 @@ int state_b(int x)
 
 int main(void)
 {
-    state_fn current_state = transition_table;
+    state_fn *current_state = transition_table;
     int val = 2;
 
     for(int i = 0; i<3;i++) {
 
-        int next_idx = (*curr)(val);
+        int next_idx = (*current_state)(val);
 
-        curr = transition_table + next_idx;
-        val* = 3;
+        current_state = transition_table + next_idx;
+        val = 3;
     }
 
     printf("\n");
 
     return 0;
 }
+
+// Answer: The program prints:
+// State A: 2
+// State A: 3
+// State A: 3
