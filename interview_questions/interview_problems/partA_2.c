@@ -2,6 +2,7 @@
 
 #include"stdio.h"
 #include"stdint.h"
+#include "stddef.h"
 
 struct RawData
 {
@@ -20,7 +21,7 @@ struct HeaderView
 int main(void)
 {
     struct RawData data = {0x1234, 0xAABBCCDD, 0xEF};
-    struct HeaderView *ptr = (uint8_t *)&data;
+    uint8_t *ptr = (uint8_t *)&data;
 
     uint32_t *payload_ptr = (uint32_t *)(ptr + offsetof(struct RawData, payload));
     struct HeaderView *h_ptr = (struct HeaderView *)(ptr + offsetof(struct RawData, header));
