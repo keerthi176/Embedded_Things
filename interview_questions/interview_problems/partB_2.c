@@ -10,6 +10,7 @@
 */
 
 #include <stdint.h>
+#include "stdio.h"
 
 typedef struct {
 
@@ -34,4 +35,27 @@ typedef struct {
 
     } MODER;
 
+    uint16_t OTYPER;
+    uint16_t RESERVED1; 
+    uint16_t ODR;
+    uint16_t RESERVED2;
+
 }MODER_TypeDef;
+
+#define GPIO_BASE_ADDRESS 0x40020000
+#define GPIO ((MODER_TypeDef *)GPIO_BASE_ADDRESS)
+
+int main(void) {
+
+    // Set Pin 0 to Output Mode (0b01)
+    GPIO->MODER.pin0_mode = 0b01;
+
+    // Toggle Pin 0 on ODR
+    GPIO->ODR ^= (1 << 0); // XOR with 1 at bit position 0 to toggle
+
+    while(1) {
+        // Main loop
+    }
+
+    return 0;
+}
