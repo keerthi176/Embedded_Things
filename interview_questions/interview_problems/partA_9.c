@@ -27,3 +27,5 @@ int main(void)
 
     return 0;
 }
+
+// Answer: The program prints "50 10".
