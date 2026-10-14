@@ -16,9 +16,9 @@
 
 /* Register Structures */
 typedef struct {
-    volatile uint32_t DUMMY[12];
+    volatile uint32_t reserved[12];
     volatile uint32_t AHB1ENR;       /* Offset 0x30: AHB1 peripheral clock enable */
-    volatile uint32_t DUMMY2[3];
+    volatile uint32_t reserved1[3];
     volatile uint32_t APB1ENR;       /* Offset 0x40: APB1 peripheral clock enable */
 } RCC_TypeDef;
 
