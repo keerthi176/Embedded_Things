@@ -53,7 +53,56 @@ typedef struct {
 
     volatile uint32_t reserved[12];
     volatile uint32_t AHB1ENR;       // Offset 0x30: AHB1 peripheral clock enable register
-    volatile uint32_t reserved1[6];
-    volatile uint32_t APB2ENR;       // Offset 0x44: APB2 peripheral clock enable register
-    
+    volatile uint32_t APB2ENR;       // Offset 0x34: APB2 peripheral clock enable register
+
 } RCC_TypeDef;
+
+#define RCC             ((RCC_TypeDef *)RCC_BASE)
+#define GPIOA           ((GPIO_TypeDef *)GPIOA_BASE)
+#define GPIOC           ((GPIO_TypeDef *)GPIOC_BASE)
+#define EXTI            ((EXTI_TypeDef *)EXTI_BASE)
+#define SYSCFG          ((SYSCFG_TypeDef *)SYSCFG_BASE)
+
+int main(void)
+{
+    // 1. Enable the clock for GPIOA and GPIOC in RCC_AHB1ENR
+    RCC->AHB1ENR |= (1U << 0) | (1U << 2); // Enable GPIOA and GPIOC clocks
+
+    // 2. Configure PA5 as General Purpose Output mode in GPIOA_MODER
+    GPIOA->MODER &= ~(0x3U << (5 * 2)); // Clear MODER5 bits
+    GPIOA->MODER |= (0x1U << (5 * 2));  // Set MODER5 to 01 (General Purpose Output)
+
+    // 3. Configure PC13 as input with pull-up resistor
+    GPIOC->MODER &= ~(0x3U << (13 * 2)); // Clear MODER13 bits (input mode)
+    GPIOC->PUPDR &= ~(0x3U << (13 * 2)); // Clear PUPDR13 bits
+    GPIOC->PUPDR |= (0x1U << (13 * 2));  // Set PUPDR13 to 01 (pull-up)
+
+    // 4. Configure SYSCFG to map EXTI13 to PC13
+    SYSCFG->EXTICR[3] &= ~(0xFU << ((13 - 12) * 4)); // Clear EXTICR3[1:0] for EXTI13
+    SYSCFG->EXTICR[3] |= (0x2U << ((13 - 12) * 4));   // Set EXTICR3[1:0] to 0010 for PC13
+
+    // 5. Configure EXTI13 for falling edge trigger and enable interrupt
+    EXTI->FTSR |= (1U << 13);   // Falling trigger enabled for EXTI13
+    EXTI->IMR |= (1U << 13);     // Unmask EXTI13 interrupt
+
+    // 6. Enable EXTI15_10 interrupt in NVIC
+    *((volatile uint32_t *)NVIC_ISER0) |= (1U << ((40 - 32))); // Enable IRQ40 for EXTI15_10
+
+    while (1) {
+        // Main loop can be empty; ISR handles button press
+    }
+
+    return 0;
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+    // Check if EXTI13 triggered the interrupt
+    if (EXTI->PR & (1U << 13)) {
+        // Clear the pending bit for EXTI13
+        EXTI->PR |= (1U << 13);
+
+        // Toggle LD2 (PA5)
+        GPIOA->ODR ^= (1U << 5);
+    }
+}
