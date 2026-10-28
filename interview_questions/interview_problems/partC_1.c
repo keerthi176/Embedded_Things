@@ -12,9 +12,9 @@ Question 1: Bare-Metal GPIO & Clock Enable via Pointer Structs Problem:
 #include <stddef.h>
 #include "stdio.h"
 
-typedef struct{
+typedef struct {
 
-    volatile uint32_t reserved[12]; // Offset 0x00 to 0x30
+    volatile uint32_t reserved[12];  // Offset 0x00 to 0x30
     volatile uint32_t AHB1ENR;       // Offset 0x30: AHB1 peripheral clock enable register
 
 } RCC_TypeDef;
@@ -33,7 +33,7 @@ typedef struct {
 
 } GPIO_TypeDef;
 
-// ! Define base addresses for RCC and GPIOA
+//! Define base addresses for RCC and GPIOA
 #define RCC_BASE        (RCC_TypeDef *)0x40023800UL
 #define GPIOA_BASE      (GPIO_TypeDef *)0x40020000UL  // This is not mentioned in the question but refer the refrence manual for STM32F4 series.
 
@@ -47,10 +47,10 @@ int main(void)
 {
     // 1. Enable the clock for GPIOA in RCC_AHB1ENR
     RCC_BASE->AHB1ENR |= (1U << 0); // Set bit 0 to enable GPIOA clock
-
+ 
     // 2. Configure PA5 as General Purpose Output mode in GPIOA_MODER
     GPIOA_BASE->MODER &= ~(0x3U << (5 * 2)); // Clear MODER5 bits
-    GPIOA_BASE->MODER |= (0x1U << (5 * 2));  // Set MODER5 to 01 (General Purpose Output)
+    GPIOA_BASE->MODER |=  (0x1U << (5 * 2)); // Set MODER5 to 01 (General Purpose Output)
 
     // 3. Toggle the LED every ~500ms using a simple software delay loop
     while (1) 
