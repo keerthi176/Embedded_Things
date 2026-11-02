@@ -8,119 +8,220 @@
 
 #include <stdint.h>
 
-/* RCC Registers */
-#define RCC_AHB1ENR     (*(volatile uint32_t *)0x40023830UL)
-#define RCC_APB2ENR     (*(volatile uint32_t *)0x40023844UL)
+typedef struct
+{
+    volatile uint32_t CR;          // 0x00
+    volatile uint32_t CFGR;        // 0x04
+    volatile uint32_t CIR;         // 0x08
+    volatile uint32_t APB2RSTR;    // 0x0C
+    volatile uint32_t APB1RSTR;    // 0x10
+    volatile uint32_t AHBENR;      // 0x14
+    volatile uint32_t APB2ENR;     // 0x18
+    volatile uint32_t APB1ENR;     // 0x1C
+} RCC;
 
-/* GPIOA Registers */
-#define GPIOA_MODER     (*(volatile uint32_t *)0x40020000UL)
-#define GPIOA_ODR       (*(volatile uint32_t *)0x40020014UL)
+typedef struct
+{
+    volatile uint32_t MODER;       // 0x00
+    volatile uint32_t OTYPER;      // 0x04
+    volatile uint32_t OSPEEDR;     // 0x08
+    volatile uint32_t PUPDR;       // 0x0C
+    volatile uint32_t IDR;         // 0x10
+    volatile uint32_t ODR;         // 0x14
+    volatile uint32_t BSRR;        // 0x18
+    volatile uint32_t LCKR;        // 0x1C
+    volatile uint32_t AFR[2];      // 0x20, 0x24
 
-/* GPIOC Registers */
-#define GPIOC_MODER     (*(volatile uint32_t *)0x40020800UL)
-#define GPIOC_PUPDR     (*(volatile uint32_t *)0x4002080CUL)
+} GPIO;
 
-/* SYSCFG Registers */
-#define SYSCFG_EXTICR4  (*(volatile uint32_t *)0x40013814UL)
+typedef struct
+{
+    volatile uint32_t CFGR1;       // 0x00
+    volatile uint32_t RESERVED;    // 0x04
+    volatile uint32_t EXTICR[4];   // 0x08 - 0x14
+} SYSCFG;
 
-/* EXTI Registers */
-#define EXTI_IMR        (*(volatile uint32_t *)0x40013C00UL)
-#define EXTI_RTSR       (*(volatile uint32_t *)0x40013C08UL)
-#define EXTI_FTSR       (*(volatile uint32_t *)0x40013C0CUL)
-#define EXTI_PR         (*(volatile uint32_t *)0x40013C14UL)
+typedef struct
+{
+    volatile uint32_t IMR;         // 0x00
+    volatile uint32_t EMR;         // 0x04
+    volatile uint32_t RTSR;        // 0x08
+    volatile uint32_t FTSR;        // 0x0C
+    volatile uint32_t SWIER;       // 0x10
+    volatile uint32_t PR;          // 0x14
+} EXTI;
 
-/* NVIC Registers */
-#define NVIC_ISER1      (*(volatile uint32_t *)0xE000E104UL)
+#define RCC_BASE       ((RCC *)0x40021000U)
 
-/* Pin definitions */
-#define LED_PIN         5U
-#define BUTTON_PIN      13U
+#define GPIOA          ((GPIO *)0x48000000U)
+#define GPIOC          ((GPIO *)0x48000800U)
 
-#define LED_MASK        (1UL << LED_PIN)
-#define BUTTON_MASK     (1UL << BUTTON_PIN)
+#define SYSCFG_BASE    ((SYSCFG *)0x40010000U)
+#define EXTI_BASE      ((EXTI *)0x40010400U)
 
-/* Function pointer declaration */
-typedef void (*ISR_Callback)(void);
+#define NVIC_ISER      ((volatile uint32_t *)0xE000E100U)
+#define NVIC_ICPR      ((volatile uint32_t *)0xE000E280U)
+#define NVIC_IPR       ((volatile uint8_t  *)0xE000E400U)
 
-/* LED toggle function */
+#define LED_PIN        5U
+#define BUTTON_PIN     13U
+
+#define LED_MASK       (1U << LED_PIN)
+#define BUTTON_MASK    (1U << BUTTON_PIN)
+
+#define EXTI4_15_IRQ   7U
+
+void toggle_led(void);
+
+void (*button_action)(void) = toggle_led;
+
 void toggle_led(void)
 {
-    GPIOA_ODR ^= LED_MASK;
+        // LED ON
+        GPIOA->ODR |= (1U << 5);
+
+        delay(500000);
+
+        // LED OFF
+        GPIOA->ODR &= ~(1U << 5);
+
+        delay(500000);
 }
 
-/* Function pointer initialized to the LED toggle function */
-ISR_Callback button_callback = toggle_led;
-
-/* GPIO and EXTI initialization */
-void button_exti_init(void)
+void gpio_init(void)
 {
-    /* 1. Enable GPIOA and GPIOC clocks */
-    RCC_AHB1ENR |= (1UL << 0) | (1UL << 2);
+    RCC_BASE->AHBENR |= (1U << 17); // Enable GPIOA clock
+    RCC_BASE->AHBENR |= (1U << 19); // Enable GPIOC
 
-    /* 2. Enable SYSCFG peripheral clock */
-    RCC_APB2ENR |= (1UL << 14);
+    GPIOA->MODER &= ~(3U << (LED_PIN * 2)); // Clear mode bits for PA5
+    GPIOA->MODER |=  (1U << (LED_PIN * 2));
 
-    /* 3. Configure PA5 as output */
-    GPIOA_MODER &= ~(3UL << (LED_PIN * 2U));
-    GPIOA_MODER |=  (1UL << (LED_PIN * 2U));
+    GPIOA->OTYPER &= ~LED_MASK;
+    GPIOA->OSPEEDR &= ~(3U << (LED_PIN * 2));
 
-    /* Initially turn LED OFF */
-    GPIOA_ODR &= ~LED_MASK;
+    GPIOA->PUPDR &= ~(3U << (LED_PIN * 2));
 
-    /* 4. Configure PC13 as input */
-    GPIOC_MODER &= ~(3UL << (BUTTON_PIN * 2U));
-
-    /* Enable pull-up on PC13 */
-    GPIOC_PUPDR &= ~(3UL << (BUTTON_PIN * 2U));
-    GPIOC_PUPDR |=  (1UL << (BUTTON_PIN * 2U));
-
-    /* 5. Route EXTI13 to GPIOC */
-    SYSCFG_EXTICR4 &= ~(0xFUL << 4U);
-    SYSCFG_EXTICR4 |=  (0x2UL << 4U);
-
-    /* 6. Disable EXTI13 while configuring it */
-    EXTI_IMR &= ~BUTTON_MASK;
-
-    /* 7. Disable rising-edge trigger */
-    EXTI_RTSR &= ~BUTTON_MASK;
-
-    /* 8. Enable falling-edge trigger */
-    EXTI_FTSR |= BUTTON_MASK;
-
-    /* 9. Clear any previously pending interrupt */
-    EXTI_PR = BUTTON_MASK;
-
-    /* 10. Enable EXTI15_10 interrupt in NVIC */
-    NVIC_ISER1 = (1UL << 8U);
-
-    /* 11. Unmask EXTI13 */
-    EXTI_IMR |= BUTTON_MASK;
+    GPIOA->ODR &= ~LED_MASK;
+    
+    GPIOC->MODER &= ~(3U << (BUTTON_PIN * 2));
+    GPIOC->PUPDR &= ~(3U << (BUTTON_PIN * 2));
+    GPIOC->PUPDR |=  (2U << (BUTTON_PIN * 2));
 }
 
-/* Interrupt Service Routine */
-void EXTI15_10_IRQHandler(void)
+void EXTI_Init(void)
 {
-    /* Check whether EXTI13 caused the interrupt */
-    if ((EXTI_PR & BUTTON_MASK) != 0U)
+    /*
+     * Enable SYSCFG peripheral clock.
+     * SYSCFG clock enable = APB2ENR bit 0.
+     */
+
+    RCC_BASE->APB2ENR |= (1U << 0);
+
+    /*
+     * EXTI13 is configured through EXTICR4.
+     *
+     * EXTICR[3], bits 7:4 correspond to EXTI13.
+     *
+     * 0000 = Port A
+     * 0001 = Port B
+     * 0010 = Port C
+     */
+
+    SYSCFG_BASE->EXTICR[3] &= ~(0xFU << 4);
+
+    SYSCFG_BASE->EXTICR[3] |=  (0x2U << 4);
+
+    /*
+     * Disable EXTI13 interrupt during configuration.
+     */
+
+    EXTI_BASE->IMR &= ~BUTTON_MASK;
+
+    /*
+     * Disable rising-edge trigger.
+     */
+
+    EXTI_BASE->RTSR &= ~BUTTON_MASK;
+
+    /*
+     * Enable falling-edge trigger.
+     */
+
+    EXTI_BASE->FTSR |= BUTTON_MASK;
+
+    /*
+     * Clear pending EXTI13 interrupt.
+     *
+     * PR bits are cleared by writing 1.
+     */
+
+    EXTI_BASE->PR = BUTTON_MASK;
+
+    /*
+     * Clear pending NVIC interrupt.
+     */
+
+    NVIC_ICPR[0] = (1U << EXTI4_15_IRQ);
+
+    /*
+     * Set interrupt priority.
+     *
+     * STM32F070 implements 2 priority bits.
+     * Priority 1 is selected here.
+     */
+
+    NVIC_IPR[EXTI4_15_IRQ] = (1U << 6);
+
+    /*
+     * Enable EXTI4_15 interrupt in NVIC.
+     */
+
+    NVIC_ISER[0] = (1U << EXTI4_15_IRQ);
+
+    /*
+     * Enable EXTI13 interrupt.
+     */
+
+    EXTI_BASE->IMR |= BUTTON_MASK;
+}
+
+void EXTI4_15_IRQHandler(void)
+{
+    /*
+     * Check whether EXTI13 generated the interrupt.
+     */
+
+    if (EXTI_BASE->PR & BUTTON_MASK)
     {
-        /* Clear the pending flag by writing 1 */
-        EXTI_PR = BUTTON_MASK;
+        /*
+         * Clear EXTI13 pending flag.
+         */
 
-        /* Invoke the callback through the function pointer */
-        if (button_callback != 0)
-        {
-            button_callback();
-        }
+        EXTI_BASE->PR = BUTTON_MASK;
+
+        /*
+         * Execute the callback through
+         * the function pointer.
+         */
+
+        button_action();
     }
 }
 
 int main(void)
 {
-    button_exti_init();
+    GPIO_Init();
+
+    EXTI_Init();
 
     while (1)
     {
-        /* CPU can perform other tasks here.
-           LED toggling is handled by the interrupt. */
+        /*
+         * CPU remains here.
+         *
+         * LED toggles only when B1 is pressed.
+         */
     }
+
+    return 0;
 }
